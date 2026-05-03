@@ -1,9 +1,0 @@
-prompt: |
-  "Generate a fake person information"
-
-
-response_format:
-  name: str
-  age: int
-  hobbies:
-    - str

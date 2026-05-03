@@ -62,8 +62,53 @@ def test_async_cloud_api_pydantic():
     #  {"name":"Michael Johnson","age":28,"hobbies":["hiking","photography","gaming"]}]
 
 
+class TestLocalAPI:
+    prompt = """
+        **Goal:**
+        You are a data privacy assistant. Your task is to de-identify personal information in a given input text.
+        
+        **Instructions:**
+        Identify all personally identifiable information (PII), including:
+        - Names (full or partial)
+        - Phone numbers
+        - Email addresses
+        - Physical addresses
+        - Dates of birth
+        - Financial information
+        - Any other information that could identify an individual
+        Replace detected PII by [SENSITIVE] tags
+
+        **Preserve:**
+        - The original structure and readability of the text
+        - Non-sensitive information
+        - Grammar and sentence flow as much as possible
+        
+        **Input text:** {{ input_text }}
+        """
+    prompt_ = prompt.replace("{{ input_text }}", "John Smith lives at 123 Main St and his email is john.smith@gmail.com.")
+    
+    def test_local_api_cpu(self):
+        response = requests.post(
+            "http://localhost:8006/local_api_cpu",
+            json={"prompt": self.prompt_}
+        )
+        print(response.json())
+        # John Smith lives at 123 Main St and his [SENSITIVE] is john.smith@gmail.com.
+    
+    def test_local_api_gpu(self):
+        response = requests.post(
+            "http://localhost:8006/local_api_gpu",
+            json={"prompt": self.prompt_}
+        )
+        print(response.json())
+        # John Smith lives at 123 Main St and his [SENSITIVE] is john.smith@gmail.com.
+
+
 if __name__ == "__main__":
-    test_cloud_api()
-    test_cloud_api_pydantic()
-    test_async_cloud_api()
-    test_async_cloud_api_pydantic()
+    # test_cloud_api()
+    # test_cloud_api_pydantic()
+    # test_async_cloud_api()
+    # test_async_cloud_api_pydantic()
+    
+    TestLocalAPI().test_local_api_cpu()
+    #TestLocalAPI().test_local_api_gpu()

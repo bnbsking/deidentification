@@ -4,13 +4,12 @@ services:
     container_name: vllm
     ports:
       - "8106:8106"
-      - "8107:8107"
     volumes:
       - ../_huggingface:/root/.cache/huggingface
       - ./:/app
     working_dir: /app
     #entrypoint: ["sleep", "infinity"]
-    entrypoint:  ["bash", "vllm_serve.sh", "amd64"]
+    entrypoint:  ["bash", "vllm_serve.sh", "1"]
     environment:
       - NVIDIA_VISIBLE_DEVICES=all  # (選填) 有些舊版 Image 需要這行
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility # (選填) 確保能跑 CUDA
@@ -19,7 +18,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 2          # 使用 1 張 GPU，若要用全部可改為 'all'
+              count: 'all'          # 使用 1 張 GPU，若要用全部可改為 'all'
               capabilities: [gpu]
 
   deid:
