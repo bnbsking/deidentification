@@ -1,22 +1,38 @@
 services:
-  localllm:
-    image: ollama/ollama:latest
-    container_name: ollama
-    ports:
-      - "11436:11434"
-    volumes:
-      - ../_ollama:/root/.ollama
-    command: ["serve"]
-
-  deidentification:
-    image: deid:v0
+  deid:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: 192.168.161.132:5000/deid:v0
     container_name: deid
     working_dir: /app
     ports:
       - "8006:8006"
     environment:
-      OLLAMA_CHAT_BASE_URL: http://ollama:11434
       API_KEYS_PATH: /app/cfgs/api_keys.yaml
     volumes:
       - ./:/app
     command: "bash /app/env.sh"
+
+  localllm:
+    image: 192.168.161.132:5000/vllm/vllm-openai:latest
+    container_name: vllm
+    ports:
+      - "8106:8106"
+    volumes:
+      - ../_huggingface:/root/.cache/huggingface
+      - ./:/app
+    working_dir: /app
+    #entrypoint: ["sleep", "infinity"]
+    entrypoint:  ["bash", "vllm_serve.sh", "1"]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all  # (選填) 有些舊版 Image 需要這行
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility # (選填) 確保能跑 CUDA
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 'all'          # 使用 1 張 GPU，若要用全部可改為 'all'
+              capabilities: [gpu]
+
