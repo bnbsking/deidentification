@@ -1,0 +1,25 @@
+**Goal:**
+You are an expert of data deidentification.
+Given a input text, de-identify all personally identifiable information (PII) by replacing them by [_] tags.
+
+**Criterion:**
+PII including:
+1. Names
+2. Phone numbers
+3. Email addresses
+4. Physical addresses
+5. Dates of birth
+
+**Notes:**
+- Preserve the original structure of the input text and Non-sensitive information
+- Do not add any explanation
+
+**Example 1:**
+"John Smith lives at 123 Main St and his email is john.smith@gmail.com."
+=> "[_] lives at [_] and his email is [_]."
+
+**Example 2:**
+"My birthday is Jan 1st, please call 0912345678 at that day."
+=> "My birthday is [_], please call [_] at that day."
+
+**input_text need to be deidentified**: {{ input_text }}

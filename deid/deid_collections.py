@@ -1,32 +1,12 @@
-from collections import OrderedDict
-from typing import Dict, Tuple
+from typing import Dict
 
-from deid.llm_api import VLLMChat
-
-
-class LRUCache:
-    def __init__(self, capacity: int):
-        self.cap = capacity
-        self.O = OrderedDict()
-
-    def get(self, key: str) -> str | bool | None:
-        if key in self.O:
-            self.O.move_to_end(key)
-            return self.O[key]
-        return None
-    
-    def put(self, key: str, value: str | bool) -> None:
-        if key not in self.O and len(self.O) == self.cap:
-            self.O.popitem(last=False)
-        self.O[key] = value
-        self.O.move_to_end(key)
+from deid.cache import LRUCache
+from deid.llm_api import init_llm
+from deid.long_context_tools import BaseSplitter
 
 
 class BaseDeid:
-    raw2deid_cache = LRUCache(capacity=128)  # raw_text: str -> deid_text: str
-    deid2eval_cache = LRUCache(capacity=128)  # deid_text: str -> deid_passed: bool
-
-    def __init__(self):
+    def __init__(self, **kwargs):
         raise NotImplementedError
 
     def deid(self, raw_text: str, **kwargs) -> str:
@@ -37,32 +17,57 @@ class BaseDeid:
 
 
 class ExampleDeid(BaseDeid):
-    def __init__(self):
-        self.llm = VLLMChat(
-            model_name="qwen3:0.6b",
-            base_url="http://vllm:8106/v1"
-        )
-        self.prompt_deid = open(f"/app/prompts/example/deid.txt", "r").read()
-        self.prompt_eval = open(f"/app/prompts/example/eval.txt", "r").read()
+    """
+    Since use local LLM, the following needs to be considered:
+    1. cache
+    2. long context
+    """
+
+    raw2deid_cache = LRUCache(capacity=128)  # raw_text: str -> deid_text: str
+    deid2eval_cache = LRUCache(capacity=128)  # deid_text: str -> deid_passed: bool
+    
+    def __init__(
+            self,
+            splitter_cfg: Dict,
+            llm_cfg: Dict,
+            deid_prompt_path: str,
+            eval_prompt_path: str
+        ):
+        self.splitter = BaseSplitter(**splitter_cfg)  # for long context
+        self.llm = init_llm(llm_cfg)
+        self.prompt_deid = open(deid_prompt_path, "r").read()
+        self.prompt_eval = open(eval_prompt_path, "r").read()
     
     def deid(self, raw_text: str) -> str:
-        out = self.raw2deid_cache.get(raw_text)
-        if out is not None:
-            return out
-        else:
-            prompt = self.prompt_deid.replace("{{ input_text }}", raw_text)
-            deid_text = self.llm.run(prompt)
-            self.raw2deid_cache.put(raw_text, deid_text)
+        deid_text = self.raw2deid_cache.get(raw_text)
+        if deid_text is not None:
             return deid_text
+        
+        sub_raw_text_list = self.splitter.split_text(raw_text)
+        out_list = []
+        for sub_raw_text in sub_raw_text_list:
+            prompt = self.prompt_deid.replace("{{ input_text }}", sub_raw_text)
+            out = self.llm.run(prompt).strip()
+            out_list.append(out)
+        deid_text = "\n".join(out_list)
+        self.raw2deid_cache.put(raw_text, deid_text)
+        return deid_text
 
     def eval(self, deid_text: str) -> bool:
         deid_passed = self.deid2eval_cache.get(deid_text)
         if deid_passed is not None:
             return deid_passed
-        else:
-            prompt = self.prompt_eval.replace("{{ input_text }}", deid_text)
+        
+        sub_deid_text_list = self.splitter.split_text(deid_text)
+        deid_passed = True
+        for sub_deid_text in sub_deid_text_list:
+            prompt = self.prompt_eval.replace("{{ input_text }}", sub_deid_text)
             out = self.llm.run(prompt, response_format='{"has_pii": bool, "explanation": str}')
             deid_passed = isinstance(out, Dict) and "has_pii" in out and not out["has_pii"]
-            self.deid2eval_cache.put(deid_text, deid_passed)
-            return deid_passed
+            if not deid_passed:
+                print(f"Deid failed\ndeid_text={deid_text}\ndeid_eval={out}")
+                deid_passed = False
+                break
+        self.deid2eval_cache.put(deid_text, deid_passed)
+        return deid_passed
         

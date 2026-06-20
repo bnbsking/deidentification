@@ -6,20 +6,14 @@ from pydantic import BaseModel
 import yaml
 
 from deid.async_funcs import async_executor
-from deid.llm_api import AzureOpenAIChatAPI, OllamaChat, VLLMChat
-from deid.llm_pydantic import schema_to_model, schema_to_json_str
+from deid.llm_api import AzureOpenAIChatAPI
+from deid.response_formatting import schema_to_model
 
 
 cfg = yaml.safe_load(open(os.getenv("API_KEYS_PATH"), "r"))
 llm_cloud = AzureOpenAIChatAPI(
     api_key=cfg["azure_openai"],
     model_name="gpt-4.1-mini"
-)
-llm_local_cpu = OllamaChat(
-    model_name="qwen3:0.6b"
-)
-llm_local_gpu = VLLMChat(
-    model_name="qwen3:0.6b"
 )
 app = FastAPI()
 
@@ -49,19 +43,3 @@ def async_cloud_api(r: List[APIRequest]):
             for ri in r
         ]
     )
-
-
-@app.post("/local_api_cpu")
-def local_api_cpu(r: APIRequest):
-    """Ollama"""
-    response_format = schema_to_json_str("custom", r.response_format_dict) \
-        if r.response_format_dict else None
-    return llm_local_cpu.run(prompt=r.prompt, response_format=response_format)
-
-
-@app.post("/local_api_gpu")
-def local_api_gpu(r: APIRequest):
-    """VLLM"""
-    response_format = schema_to_json_str("custom", r.response_format_dict) \
-        if r.response_format_dict else None
-    return llm_local_gpu.run(prompt=r.prompt, response_format=response_format)

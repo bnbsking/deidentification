@@ -1,4 +1,5 @@
 import re
+from typing import List
 
 import tiktoken
 
@@ -6,6 +7,7 @@ import tiktoken
 def get_token_count(text: str, model: str = "gpt-4.1") -> int:
     enc = tiktoken.encoding_for_model(model)
     return len(enc.encode(text))
+
 
 def get_approx_token_count(text: str) -> int:
     """
@@ -23,3 +25,19 @@ def get_approx_token_count(text: str) -> int:
         + len(punctuation) * 1
 
     return tokens
+
+
+class BaseSplitter:
+    def __init__(self, limit_len: int = int(8192 * 0.85), step: int = 500):
+        self.limit_len = limit_len
+        self.step = step
+
+    def split_text(self, text: str) -> List[str]:
+        raw_text_list = []
+        for i in range(0, len(text), self.step):
+            piece = text[i: i + self.step]
+            if not raw_text_list or get_approx_token_count(raw_text_list[-1] + piece) > self.limit_len:
+                raw_text_list.append(piece)
+            else:
+                raw_text_list[-1] += piece
+        return raw_text_list

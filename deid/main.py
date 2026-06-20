@@ -1,12 +1,14 @@
+from typing import Dict
+
 from deid import deid_collections
 
 
-deid_registry = {}  # name -> deid.BaseDeid
+deid_registry = {}  # str -> deid_collections.BaseDeid object
 
 
-def register(key: str, deid_cls_name: str, **kwargs):
-    cls = getattr(deid_collections, deid_cls_name)
-    deid_registry[key] = cls(**kwargs)
+def register(key: str, deid_cls_name: str, deid_cls_args: Dict):
+    deid_cls = getattr(deid_collections, deid_cls_name)
+    deid_registry[key] = deid_cls(**deid_cls_args)
 
 
 def unregister(key: str):
@@ -24,4 +26,5 @@ def run(key: str, raw_text: str) -> str:
     if obj.eval(deid_text):
         return deid_text
     else:
-        raise ValueError("Deidentified content did not pass evaluation.")
+        return "[Deid_failed]"
+        

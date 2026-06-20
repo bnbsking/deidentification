@@ -1,20 +1,16 @@
 import ast
 import json
-import os
 import re
+import sys
 from typing import Dict, List, Optional, Union, Type
-import yaml
 
 import httpx
 from openai import OpenAI
-from pydantic import BaseModel
 import requests
-
-from deid.llm_tokens import get_token_count, get_approx_token_count
 
 
 class LLMAPI:
-    def __init__(self, api_key: str, model_name: str, **kwargs):
+    def __init__(self, **kwargs):
         raise NotImplementedError
 
     def run(self, **kwargs) -> Union[Dict, str]:
@@ -40,14 +36,9 @@ def llm_postprocess(out: str, to_dict: bool = False) -> Union[Dict, str]:
 
 
 class VLLMChat(LLMAPI):
-    def __init__(
-            self,
-            api_key: str = "",
-            model_name: str = "",
-            base_url: str = ""
-        ):
+    def __init__(self, model_name: str, base_url: str):
         self.model_name = model_name
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.client = OpenAI(api_key="", base_url=base_url)
 
     def _prepare_args(self, prompt: Union[str, List], temperature: float) -> Dict:
         if isinstance(prompt, str):
@@ -77,12 +68,7 @@ class VLLMChat(LLMAPI):
 
 
 class OllamaChat(LLMAPI):
-    def __init__(
-            self,
-            api_key: str = "",
-            model_name: str = os.environ.get('OLLAMA_MODEL_NAME', ''),
-            base_url: str = f"{os.environ.get('OLLAMA_CHAT_BASE_URL', '')}/api/generate",
-        ):
+    def __init__(self, model_name: str, base_url: str):
         self.model_name = model_name
         self.base_url = base_url
 
@@ -103,11 +89,7 @@ class AzureOpenAIChatAPI(LLMAPI):
     """
     All support pydantic response in server side
     """
-    def __init__(
-            self,
-            api_key: str,
-            model_name: str = "gpt-4.1-mini"
-        ):
+    def __init__(self, api_key: str, model_name: str = "gpt-4.1-mini"):
         self.api_key = api_key
         self.azure_endpoint = f"https://project-emc-llm-foundry.openai.azure.com/openai/deployments/{model_name}/chat/completions?api-version=2024-10-21"
     
@@ -157,3 +139,9 @@ class AzureOpenAIChatAPI(LLMAPI):
                 json=data
             )
         return response.json()["choices"][0]["message"]["content"]
+
+
+def init_llm(llm_cfg: Dict) -> LLMAPI:
+    llm_cls = getattr(sys.modules[__name__], llm_cfg["cls_name"])
+    llm = llm_cls(**llm_cfg["args"])
+    return llm
