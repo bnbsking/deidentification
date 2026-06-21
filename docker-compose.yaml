@@ -9,7 +9,7 @@ services:
     ports:
       - "8006:8006"
     environment:
-      API_KEYS_PATH: /app/cfgs/api_keys.yaml
+      BASE_CFG_PATH: /app/cfgs/serve.yaml
     volumes:
       - ./:/app
     command: "bash /app/env.sh"

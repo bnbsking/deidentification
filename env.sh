@@ -8,6 +8,6 @@ poetry run pip install -e . --no-deps
 
 # poetry run pip install -e .[full]
 
-poetry run uvicorn deid.serve:app --reload --host 0.0.0.0 --port 8006
+poetry run uvicorn serve:app --reload --host 0.0.0.0 --port 8006
 
 tail -f /dev/null

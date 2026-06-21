@@ -1,5 +1,6 @@
 import ast
 import json
+import os
 import re
 import sys
 from typing import Dict, List, Optional, Union, Type
@@ -7,6 +8,7 @@ from typing import Dict, List, Optional, Union, Type
 import httpx
 from openai import OpenAI
 import requests
+import yaml
 
 
 class LLMAPI:
@@ -90,7 +92,11 @@ class AzureOpenAIChatAPI(LLMAPI):
     All support pydantic response in server side
     """
     def __init__(self, api_key: str, model_name: str = "gpt-4.1-mini"):
-        self.api_key = api_key
+        if os.path.isfile(api_key):
+            with open(api_key, "r") as f:
+                self.api_key = yaml.safe_load(f)["azure_openai"]
+        else:
+            self.api_key = api_key
         self.azure_endpoint = f"https://project-emc-llm-foundry.openai.azure.com/openai/deployments/{model_name}/chat/completions?api-version=2024-10-21"
     
     def run(self, prompt: Union[str, List], response_format: Optional[Type] = None) -> str:

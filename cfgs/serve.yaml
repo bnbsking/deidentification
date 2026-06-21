@@ -1,0 +1,8 @@
+cloud_llm_cfg:
+  cls_name: AzureOpenAIChatAPI
+  args:
+    api_key: /app/cfgs/api_keys.yaml
+    model_name: "gpt-4.1-mini"
+
+main_cfg_list:
+  example: /app/exps/main/example/cfg.yaml

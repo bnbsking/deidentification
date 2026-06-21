@@ -8,7 +8,6 @@ PII including:
 2. Phone numbers
 3. Email addresses
 4. Physical addresses
-5. Dates of birth
 
 **Example 1:**
 John Smith lives at [_] and his email is [_].
